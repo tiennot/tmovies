@@ -50,24 +50,27 @@ public class Retriever implements Runnable{
 	    // Establish a connection
 	    client.connect();
 
+	    //Creates processor object to handle the tweets
+	    Processor p = new Processor();
+	    
 	    // Do whatever needs to be done with messages
 	    while(true){
 			try {
 				String msg;
 				msg = queue.take();
 				//Processes the tweet
-				Processor.processTweet(msg);
+				p.processTweet(msg);
 			} catch (InterruptedException e1) {
 				e1.printStackTrace();
 				break;
 			}
 	    }
 	    client.stop();
+	    p.close();
 	}
 	
 	//Main method
 	public static void main(String[] args) {
-		
 		//Launch the retriever on its own thread
 		(new Thread(new Retriever(args[0], args[1], args[2], args[3]))).start();
 	}
