@@ -26,10 +26,12 @@ public class SQLClient{
 		}
 	}
 	
-	public boolean insertTweet(String text, String user) throws Exception{
-		PreparedStatement ps = conn.prepareStatement("INSERT INTO tweets (user, text) VALUES (?, ?)");
-		ps.setString(1, user);
-		ps.setString(2, text);
+	public boolean insertTweet(Tweet tweet) throws Exception{
+		PreparedStatement ps = conn.prepareStatement("INSERT INTO tweets (timestamp, user, text, avatar) VALUES (?, ?, ?, ?)");
+		ps.setLong(1, tweet.timestamp);
+		ps.setString(2, tweet.user);
+		ps.setString(3, tweet.text);
+		ps.setString(4, tweet.avatar);
 		int val = ps.executeUpdate();
 		return val==1;
 	}

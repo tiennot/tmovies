@@ -2,7 +2,6 @@ import twitter4j.JSONException;
 import twitter4j.JSONObject;
 
 public class Processor {
-	private static long nbTweetProcessed = 0;
 	private SQLClient mysqlClient;
 	
 	//Constructor
@@ -18,13 +17,13 @@ public class Processor {
 			//Creates JSON Object
 			JSONObject obj;
 			obj = new JSONObject(msg);
-			String text = obj.getString("text");
-			String user = obj.getJSONObject("user").getString("name");
+			//Ignores retweets
+			if(obj.has("retweeted_status")){
+				return;
+			}
 			//Inserts into database
-			mysqlClient.insertTweet(text, user);
-			nbTweetProcessed++;
+			mysqlClient.insertTweet(new Tweet(obj));
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
