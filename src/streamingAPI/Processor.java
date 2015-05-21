@@ -1,13 +1,14 @@
+package streamingAPI;
 import twitter4j.JSONException;
 import twitter4j.JSONObject;
 
 public class Processor {
-	private SQLClient mysqlClient;
+	private MySQLClient mysqlClient;
 	
 	//Constructor
 	public Processor(){
 		//Connects to the database
-	    mysqlClient = new SQLClient("jdbc:mysql://127.0.0.1/", "twitter");
+	    mysqlClient = new MySQLClient("jdbc:mysql://127.0.0.1/", "twitter");
 	    mysqlClient.connect("root", "");
 	}
 	
@@ -21,8 +22,11 @@ public class Processor {
 			if(obj.has("retweeted_status")){
 				return;
 			}
+			Tweet tweet = new Tweet(obj);
+			//If not relevant, over
+			//if(tweet.relevant==false) return;
 			//Inserts into database
-			mysqlClient.insertTweet(new Tweet(obj));
+			mysqlClient.insertTweet(tweet);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

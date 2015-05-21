@@ -1,3 +1,4 @@
+package streamingAPI;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -30,11 +31,10 @@ public class Retriever implements Runnable{
 	public void run() {
 		StatusesFilterEndpoint endpoint = new StatusesFilterEndpoint();
 	    // add some track terms
-	    //endpoint.trackTerms(Lists.newArrayList("#sunny", "#rain", "#cloudy"));
-		endpoint.addPostParameter("track", "sunny,rain,cloudy");
+		endpoint.addPostParameter("track", "#book, #novel");
 
 		//Filters, only tweets from Paris area
-		//endpoint.addPostParameter("locations", "1.87,48.5,2.75,49.1");
+		//endpoint.addPostParameter("locations", "-74,40,-73,41");
 	    
 	    Authentication auth = new OAuth1(consumerKey, consumerSecret, token, secret);
 	    // Authentication auth = new BasicAuth(username, password);
