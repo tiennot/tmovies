@@ -8,14 +8,17 @@ import twitter4j.JSONObject;
  */
 public class Movie {
 	//All attributes
-	public String id, title, release_date, overview, poster_path;
+	public long id;
+	public String title, release_date, overview, poster_path;
+	public float popularity;
 	
 	//Constructor from the json object
 	public Movie(JSONObject obj) throws JSONException{
-		this.id = obj.getString("id");
+		this.id = obj.getLong("id");
 		this.title = obj.getString("title");
 		this.release_date = obj.getString("release_date");
 		this.overview = obj.getString("overview");
 		this.poster_path = obj.getString("poster_path");
+		this.popularity = Float.parseFloat(obj.getString("popularity"));
 	}
 }

@@ -32,14 +32,21 @@ public class MySQLClient{
 	}
 	
 	//Inserts a movie into the database
-	public boolean insertMovie(Movie movie) throws Exception{
-		PreparedStatement ps = conn.prepareStatement(
-				"INSERT INTO movies (id, title, release_date, overview, poster_path) VALUES (?, ?, ?, ?, ?, ?)");
-		ps.setString(1, movie.id);
-		ps.setString(2, movie.release_date);
-		ps.setString(3, movie.overview);
-		ps.setString(4, movie.poster_path);
-		return ps.executeUpdate()==1;
+	public boolean insertMovie(Movie movie){
+		try{
+			PreparedStatement ps = conn.prepareStatement(
+					"INSERT INTO movies (id, title, release_date, overview, poster_path, popularity) VALUES (?, ?, ?, ?, ?, ?)");
+			ps.setLong(1, movie.id);
+			ps.setString(2, movie.title);
+			ps.setString(3, movie.release_date);
+			ps.setString(4, movie.overview);
+			ps.setString(5, movie.poster_path);
+			ps.setFloat(6, movie.popularity);
+			return ps.executeUpdate()==1;
+		}catch(Exception e){
+			e.printStackTrace();
+			return false;
+		}
 	}
 	
 	//Gets the list of the id currentl in the database
@@ -52,9 +59,10 @@ public class MySQLClient{
 	}
 	
 	//Removes movies older than given date
-	public void removeOlderMovies(String date) throws SQLException{
-		PreparedStatement ps = conn.prepareStatement("DELETE FROM movies WHERE release_date < ?");
-		ps.setString(1, date);
+	public boolean removeMovie(long id) throws SQLException{
+		PreparedStatement ps = conn.prepareStatement("DELETE FROM movies WHERE id = ?");
+		ps.setLong(1, id);
+		return ps.execute();
 	}
 	
 	//Inserts a tweet into the database

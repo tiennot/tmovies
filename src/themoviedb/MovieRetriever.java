@@ -39,72 +39,61 @@ public class MovieRetriever {
 	}
 	
 	//Main method, return list of last movies
-	public ArrayList<Movie> getNewMovies() throws Exception{
+	public void updateDatabase() throws Exception{
 		//Gets currently referenced movies
 		HashSet<Long> currentMoviesIds = sqlClient.getIdsInDatabase();
-		//The object to return
-		ArrayList<Movie> movies = new ArrayList<Movie>();
-		//Starts with page one
-		int page = 1;
-		while(page<10){
-			//Computes the URL
-			String url = "https://api.themoviedb.org/3/discover/movie?api_key="
-					+ Configuration.getApiKey()
-					+ "&release_date.gte="
-					+ getStartDate()
-					+ "&release_date.lte="
-					+ getEndDate()
-					+ "&page="
-					+ page;
-			System.out.println(url);
-			//Gets the JSON from the API
-			JSONObject json = JSONDownloader.getJSON(url);
-			//Adds the movies to the list
-			JSONArray results = json.getJSONArray("results");
-			for (int i = 0; i < results.length(); i++) {
-				JSONObject movieObject = results.getJSONObject(i);
-				//Ignores already referenced movies
-				long movieId = movieObject.getLong("id");
-				if(currentMoviesIds.contains(movieId)){
-					System.out.println("Already in db");
-					continue;
+		HashSet<Long> movieIds = new HashSet<Long>();
+		//Urls
+		String[] urls = new String[2];
+		urls[0] = "https://api.themoviedb.org/3/movie/now_playing?api_key=" + Configuration.getApiKey();
+		urls[1] = "https://api.themoviedb.org/3/movie/upcoming?api_key=" + Configuration.getApiKey();
+		for(String baseUrl: urls){
+			//Starts with page one
+			int page = 1;
+			while(page<1000){		
+				String url = baseUrl + "&page=" + page;
+				System.out.println(url);
+				//Gets the JSON from the API
+				JSONObject json = JSONDownloader.getJSON(url);
+				//Adds the movies to the list
+				JSONArray results = json.getJSONArray("results");
+				for (int i = 0; i < results.length(); i++) {
+					JSONObject movieObject = results.getJSONObject(i);
+					//Ignores already referenced movies
+					long movieId = movieObject.getLong("id");
+					if(currentMoviesIds.contains(movieId) || movieIds.contains(movieId)){
+						System.out.println("Already in db");
+						continue;
+					}
+					//Gets the movie detailed JSON
+					JSONObject detailedJSON = JSONDownloader.getJSON(
+							"http://api.themoviedb.org/3/movie/"
+							+ movieId
+							+ "?api_key="
+							+ Configuration.getApiKey());
+					//Adds the movie to return list
+					sqlClient.insertMovie(new Movie(detailedJSON));
+					movieIds.add(movieId);
+					System.out.println("movie added");
 				}
-				//Gets the movie detailed JSON
-				JSONObject detailedJSON = JSONDownloader.getJSON(
-						"http://api.themoviedb.org/3/movie/"
-						+ movieId
-						+ "?api_key="
-						+ Configuration.getApiKey());
-				//Adds the movie to return list
-				movies.add(new Movie(detailedJSON));
-				System.out.println("movie fetched");
+				//Determines if we need to go on
+				int total_pages = json.getInt("total_pages");
+				if(page>=total_pages) break;
+				//Increments page number
+				page++;
 			}
-			//Determines if we need to go on
-			int total_pages = json.getInt("total_pages");
-			if(page>=total_pages) break;
-			//Increments page number
-			page++;
-			
 		}
-		return movies;
-	}
-	
-	//Updates the database movies
-	public void updateDatabase() throws Exception{
-		//Removes too old movies
-		sqlClient.removeOlderMovies(getStartDate());
-		//Adds new movies
-		ArrayList<Movie> newMovies = getNewMovies();
-		for(Movie movie: newMovies)
-			sqlClient.insertMovie(movie);
+		//Eliminates movies we just retrieved
+		for(long id: currentMoviesIds){
+			if(!movieIds.contains(id)) sqlClient.removeMovie(id);
+		}
 	}
 	
 	public static void main(String[] args) throws Exception {
 		MySQLClient sql = new MySQLClient("jdbc:mysql://127.0.0.1/", "movies");
+		Configuration config = new Configuration();
+		System.out.println(config.getImageBaseUrl());
 		sql.connect("root", "");
-		ArrayList<Movie> movies = new MovieRetriever(sql).getNewMovies();
-		for(Movie movie: movies){
-			System.out.println(movie.title + " - " + movie.release_date);
-		}
+		new MovieRetriever(sql).updateDatabase();
 	}
 }
