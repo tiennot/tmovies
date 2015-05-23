@@ -3,6 +3,7 @@ package themoviedb;
 import java.sql.Timestamp;
 
 import tools.JSONDownloader;
+import tools.MySQLClient;
 import twitter4j.JSONException;
 import twitter4j.JSONObject;
 
@@ -11,15 +12,25 @@ import twitter4j.JSONObject;
  */
 public class Configuration {
 	//Static, API key
-	private static String api_key = "76b1ee24ab9d445ff9849c97f44e8724";
-	public static String getApiKey(){ return api_key; }
+	private static final String api_key = "76b1ee24ab9d445ff9849c97f44e8724";
+	public static final String getApiKey(){ return api_key; }
+	//Static, minimum popularity for a film to be considered
+	public static final double min_popularity = 0.80;
 	
 	//JSON configuration from themoviedb
 	private JSONObject json_config;
 	private long config_last_update = 0;
 	
+	//SQL client
+	MySQLClient sqlClient;
+	
+	//Constructor
+	public Configuration(MySQLClient sqlClient){
+		this.sqlClient = sqlClient;
+	}
+	
 	//Loads the JSON from the server of themoviedb
-	public void reloadConfig(){
+	public void updateConfig(){
 		try {
 			json_config = JSONDownloader.getJSON("http://api.themoviedb.org/3/configuration?api_key="+Configuration.getApiKey());
 			config_last_update = System.currentTimeMillis();
@@ -36,7 +47,7 @@ public class Configuration {
 	
 	//Provides the image base URL
 	public String getImageBaseUrl() throws JSONException{
-		if(isConfigExpired()) reloadConfig();
+		if(isConfigExpired()) updateConfig();
 		return json_config.getJSONObject("images").getString("base_url");
 	}
 	

@@ -5,8 +5,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 
-import streamingAPI.MySQLClient;
 import tools.JSONDownloader;
+import tools.MySQLClient;
 import twitter4j.JSONArray;
 import twitter4j.JSONObject;
 
@@ -18,7 +18,7 @@ public class MovieRetriever {
 	MySQLClient sqlClient;
 	
 	//Constructor
-	MovieRetriever(MySQLClient sqlClient){
+	public MovieRetriever(MySQLClient sqlClient){
 		this.sqlClient = sqlClient;
 	}
 	
@@ -41,7 +41,7 @@ public class MovieRetriever {
 	//Main method, return list of last movies
 	public void updateDatabase() throws Exception{
 		//Gets currently referenced movies
-		HashSet<Long> currentMoviesIds = sqlClient.getIdsInDatabase();
+		HashSet<Long> currentMoviesIds = sqlClient.getMovieIdsFromDb();
 		HashSet<Long> movieIds = new HashSet<Long>();
 		//Urls
 		String[] urls = new String[2];
@@ -59,12 +59,20 @@ public class MovieRetriever {
 				JSONArray results = json.getJSONArray("results");
 				for (int i = 0; i < results.length(); i++) {
 					JSONObject movieObject = results.getJSONObject(i);
-					//Ignores already referenced movies
+					//Ignores movies not popular enough
+					if(!movieObject.has("popularity") ||
+							Double.parseDouble(movieObject.getString("popularity"))<Configuration.min_popularity)
+						continue;
+					//Only updates popularity for already referenced movies
 					long movieId = movieObject.getLong("id");
-					if(currentMoviesIds.contains(movieId) || movieIds.contains(movieId)){
-						System.out.println("Already in db");
+					if(currentMoviesIds.contains(movieId)){
+						//TODO update pop
+						movieIds.add(movieId);
 						continue;
 					}
+					//Ignores duplicate movies
+					if(movieIds.contains(movieId))
+						continue;
 					//Gets the movie detailed JSON
 					JSONObject detailedJSON = JSONDownloader.getJSON(
 							"http://api.themoviedb.org/3/movie/"
@@ -87,13 +95,5 @@ public class MovieRetriever {
 		for(long id: currentMoviesIds){
 			if(!movieIds.contains(id)) sqlClient.removeMovie(id);
 		}
-	}
-	
-	public static void main(String[] args) throws Exception {
-		MySQLClient sql = new MySQLClient("jdbc:mysql://127.0.0.1/", "movies");
-		Configuration config = new Configuration();
-		System.out.println(config.getImageBaseUrl());
-		sql.connect("root", "");
-		new MovieRetriever(sql).updateDatabase();
 	}
 }

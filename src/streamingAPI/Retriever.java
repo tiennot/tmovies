@@ -2,6 +2,8 @@ package streamingAPI;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import tools.MySQLClient;
+
 import com.twitter.hbc.ClientBuilder;
 import com.twitter.hbc.core.Client;
 import com.twitter.hbc.core.Constants;
@@ -19,25 +21,33 @@ public class Retriever implements Runnable{
 	private String token;
 	private String secret;
 	
+	//The track keywords
+	private String trackString = "";
+	public void setTrackString(String s){trackString=s;}
+	
+	//Tweet processor
+	Processor p;
+	
 	//Constructor
-	public Retriever(String consumerKey, String consumerSecret, String token, String secret){
+	public Retriever(String consumerKey, String consumerSecret, String token, String secret, Processor p){
 		this.consumerKey = consumerKey;
 		this.consumerSecret = consumerSecret;
 		this.token = token;
 		this.secret = secret;
+		this.p = p;
 	}
 	
 	//Run method
 	public void run() {
 		StatusesFilterEndpoint endpoint = new StatusesFilterEndpoint();
 	    // add some track terms
-		endpoint.addPostParameter("track", "#book, #novel");
-
-		//Filters, only tweets from Paris area
-		//endpoint.addPostParameter("locations", "-74,40,-73,41");
+		endpoint.addPostParameter("track", this.trackString);
+		
+		//Restricts to English tweets
+		endpoint.addPostParameter("language", "en");
 	    
+		//Authenticate with credentials
 	    Authentication auth = new OAuth1(consumerKey, consumerSecret, token, secret);
-	    // Authentication auth = new BasicAuth(username, password);
 
 	    // Create a new BasicClient. By default gzip is enabled.
 	    Client client = new ClientBuilder()
@@ -49,9 +59,6 @@ public class Retriever implements Runnable{
 
 	    // Establish a connection
 	    client.connect();
-
-	    //Creates processor object to handle the tweets
-	    Processor p = new Processor();
 	    
 	    // Do whatever needs to be done with messages
 	    while(true){
@@ -71,7 +78,6 @@ public class Retriever implements Runnable{
 	
 	//Main method
 	public static void main(String[] args) {
-		//Launch the retriever on its own thread
-		(new Thread(new Retriever(args[0], args[1], args[2], args[3]))).start();
+		
 	}
 }
