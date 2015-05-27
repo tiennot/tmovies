@@ -9,7 +9,7 @@ import twitter4j.JSONObject;
  */
 public class Tweet {
 	//Attributes of the tweet
-	public String text, user, avatar;
+	public String text, user, screen_name, avatar;
 	//The detected location
 	public int city = 0;
 	//Time
@@ -22,8 +22,10 @@ public class Tweet {
 		//Parse values
 		timestamp = obj.getLong("timestamp_ms");
 		text = obj.getString("text");
-		user = obj.getJSONObject("user").getString("name");
-		avatar = obj.getJSONObject("user").getString("profile_image_url");
+		JSONObject userObj = obj.getJSONObject("user");
+		user = userObj.getString("name");
+		screen_name = userObj.has("screen_name") ? userObj.getString("screen_name") : "";
+		avatar = userObj.getString("profile_image_url");
 	}	
 
 }

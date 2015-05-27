@@ -16,8 +16,8 @@ public class JSONDownloader {
         //Waits if necessary
 		if(lastCalls.size()==30){
 			long time = System.currentTimeMillis();
-			if(time-lastCalls.getFirst()<30000){
-				Thread.sleep(time - lastCalls.getFirst() +500);
+			if(time-lastCalls.getFirst()<10000){
+				Thread.sleep(lastCalls.getFirst()+10000+500 -time);
 			}
 		}
 		//Reads the JSON URL

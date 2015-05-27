@@ -2,6 +2,7 @@ package tools;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Set;
 
 import javax.sql.*;
 
@@ -71,23 +72,33 @@ public class MySQLClient{
 		return list;
 	}
 	
+	//Removes movies not in the given set
+	public boolean removeMovieNotInSet(Set<Long> ids) throws SQLException{
+		String inString = "(";
+		for(long id: ids){
+			inString += id + ",";
+		}
+		inString += "0)";
+		return conn.createStatement().execute("DELETE FROM movies WHERE id NOT IN "+inString);
+	}
 	
-	//Removes movies older than given date
-	public boolean removeMovie(long id) throws SQLException{
-		PreparedStatement ps = conn.prepareStatement("DELETE FROM movies WHERE id = ?");
-		ps.setLong(1, id);
-		return ps.execute();
+	public boolean updatePopularity(long movieId, double popularity) throws Exception{
+		PreparedStatement ps = conn.prepareStatement("UPDATE movies SET popularity=? WHERE id=?");
+		ps.setDouble(1, popularity);
+		ps.setLong(2, movieId);
+		return ps.executeUpdate()==1;
 	}
 	
 	//Inserts a tweet into the database
 	public boolean insertTweet(Tweet tweet) throws Exception{
 		PreparedStatement ps = conn.prepareStatement(
-				"INSERT INTO tweets (timestamp, user, text, avatar, movieId) VALUES (?, ?, ?, ?, ?)");
+				"INSERT INTO tweets (timestamp, user, screen_name, text, avatar, movieId) VALUES (?, ?, ?, ?, ?, ?)");
 		ps.setLong(1, tweet.timestamp);
 		ps.setString(2, tweet.user);
-		ps.setString(3, tweet.text);
-		ps.setString(4, tweet.avatar);
-		ps.setFloat(5, tweet.movieId);
+		ps.setString(3, tweet.screen_name);
+		ps.setString(4, tweet.text);
+		ps.setString(5, tweet.avatar);
+		ps.setFloat(6, tweet.movieId);
 		return ps.executeUpdate()==1;
 	}
 	

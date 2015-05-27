@@ -16,6 +16,7 @@ public class Processor {
 	
 	//Main method for processing
 	public void processTweet(String msg){
+		//System.out.println(msg);
 		try {
 			//Creates JSON Object
 			JSONObject obj;

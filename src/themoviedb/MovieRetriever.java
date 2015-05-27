@@ -2,6 +2,8 @@ package themoviedb;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
 
@@ -40,10 +42,10 @@ public class MovieRetriever {
 	
 	//Main method, return list of last movies
 	public void updateDatabase() throws Exception{
-		//Gets currently referenced movies
-		HashSet<Long> currentMoviesIds = sqlClient.getMovieIdsFromDb();
-		HashSet<Long> movieIds = new HashSet<Long>();
-		//Urls
+		//Stores the list of movies and their popularity
+		ArrayList<IdAndPop> movieList = new ArrayList<IdAndPop>();
+		
+		//URL to crawl
 		String[] urls = new String[2];
 		urls[0] = "https://api.themoviedb.org/3/movie/now_playing?api_key=" + Configuration.getApiKey();
 		urls[1] = "https://api.themoviedb.org/3/movie/upcoming?api_key=" + Configuration.getApiKey();
@@ -59,30 +61,12 @@ public class MovieRetriever {
 				JSONArray results = json.getJSONArray("results");
 				for (int i = 0; i < results.length(); i++) {
 					JSONObject movieObject = results.getJSONObject(i);
-					//Ignores movies not popular enough
-					if(!movieObject.has("popularity") ||
-							Double.parseDouble(movieObject.getString("popularity"))<Configuration.min_popularity)
-						continue;
-					//Only updates popularity for already referenced movies
+					//Ignores movies without popularity
+					if(!movieObject.has("popularity")) continue;
+					//Adds movie to the list
+					double popularity = Double.parseDouble(movieObject.getString("popularity"));
 					long movieId = movieObject.getLong("id");
-					if(currentMoviesIds.contains(movieId)){
-						//TODO update pop
-						movieIds.add(movieId);
-						continue;
-					}
-					//Ignores duplicate movies
-					if(movieIds.contains(movieId))
-						continue;
-					//Gets the movie detailed JSON
-					JSONObject detailedJSON = JSONDownloader.getJSON(
-							"http://api.themoviedb.org/3/movie/"
-							+ movieId
-							+ "?api_key="
-							+ Configuration.getApiKey());
-					//Adds the movie to return list
-					sqlClient.insertMovie(new Movie(detailedJSON));
-					movieIds.add(movieId);
-					System.out.println("movie added");
+					movieList.add(new IdAndPop(movieId, popularity));
 				}
 				//Determines if we need to go on
 				int total_pages = json.getInt("total_pages");
@@ -91,9 +75,60 @@ public class MovieRetriever {
 				page++;
 			}
 		}
-		//Eliminates movies we just retrieved
-		for(long id: currentMoviesIds){
-			if(!movieIds.contains(id)) sqlClient.removeMovie(id);
+		//Sorts the list of freshly retrieved movies
+		Collections.sort(movieList);
+		
+		//Gets set of currently referenced movies
+		HashSet<Long> dbMoviesIds = sqlClient.getMovieIdsFromDb();
+		
+		//Loops through the list
+		HashSet<Long> chosenMovies = new HashSet<Long>();
+		while(chosenMovies.size()<50 && !movieList.isEmpty()){
+			try{
+				IdAndPop movie = movieList.get(0);
+				if(chosenMovies.contains(movie.getId())){
+					//Ignores duplicates
+				}else if(dbMoviesIds.contains(movie.getId())){
+					//Updates the popularity
+					sqlClient.updatePopularity(movie.getId(), movie.getPop());
+					//Adds to chosen set
+					chosenMovies.add(movie.getId());
+				}else{
+					//Gets the movie detailed JSON
+					JSONObject detailedJSON = JSONDownloader.getJSON(
+							"http://api.themoviedb.org/3/movie/"
+							+ movie.getId()
+							+ "?api_key="
+							+ Configuration.getApiKey());
+					//Inserts movie in the database
+					sqlClient.insertMovie(new Movie(detailedJSON));
+					//Adds to the set
+					chosenMovies.add(movie.getId());
+				}
+			}catch(Exception e){
+				System.out.println("Error while inserting movie candidate");
+			}
+			movieList.remove(0);
+		}
+		//Eliminate obsolete movies
+		sqlClient.removeMovieNotInSet(chosenMovies);
+	}
+	
+	//Little class to pair a movie id and its popularity
+	public static class IdAndPop implements Comparable<IdAndPop>{
+		private final long id;
+		private final double pop;
+		public IdAndPop(long id, double pop){
+			this.id = id;
+			this.pop = pop;
+		}
+		public final double getPop(){return pop;}
+		public final long getId(){return id;}
+		//Comparator to allow sorting
+		public int compareTo(IdAndPop that) {
+			if(this.pop>that.pop) return -1;
+			else if(this.pop<that.getPop()) return 1;
+			else return Long.compare(this.id, that.getId());
 		}
 	}
 }
