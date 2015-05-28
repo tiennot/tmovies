@@ -26,6 +26,15 @@ public class Tweet {
 		user = userObj.getString("name");
 		screen_name = userObj.has("screen_name") ? userObj.getString("screen_name") : "";
 		avatar = userObj.getString("profile_image_url");
-	}	
+	}
+	
+	//Analysis method to tell if the tweet should go to top tweets
+	public boolean topTweet(){
+		if(text.indexOf("movie")!=-1
+				|| text.indexOf("film")!=-1
+				|| text.indexOf("watch")!=-1)
+			return true;
+		return false;
+	}
 
 }

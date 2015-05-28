@@ -19,6 +19,7 @@ public class Main {
 		//Update movie database
 		MovieRetriever movieRetriever = new MovieRetriever(sql);
 		movieRetriever.updateDatabase();
+		sql.generateRelFigures();
 		//The track generator to generate movie keywords
 		TrackManager trackManager = new TrackManager(sql);
 		//Instantiate retriever and load movie keywords

@@ -1,6 +1,8 @@
 package tools;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -92,14 +94,64 @@ public class MySQLClient{
 	//Inserts a tweet into the database
 	public boolean insertTweet(Tweet tweet) throws Exception{
 		PreparedStatement ps = conn.prepareStatement(
-				"INSERT INTO tweets (timestamp, user, screen_name, text, avatar, movieId) VALUES (?, ?, ?, ?, ?, ?)");
+				"INSERT INTO tweets (timestamp, user, screen_name, text, avatar, movieId, top_tweet) VALUES (?, ?, ?, ?, ?, ?, ?)");
 		ps.setLong(1, tweet.timestamp);
 		ps.setString(2, tweet.user);
 		ps.setString(3, tweet.screen_name);
 		ps.setString(4, tweet.text);
 		ps.setString(5, tweet.avatar);
 		ps.setFloat(6, tweet.movieId);
+		ps.setBoolean(7, tweet.topTweet());
 		return ps.executeUpdate()==1;
+	}
+	
+	//Generates the relative popularity, flow and rating
+	public void generateRelFigures() throws SQLException{
+		//Lists
+		ArrayList<Long> listIds = new ArrayList<Long>();
+		ArrayList<Integer> listCounts = new ArrayList<Integer>();
+		ArrayList<Float> listRatioTop = new ArrayList<Float>();
+		ArrayList<Float> listPopularity = new ArrayList<Float>();
+		//Retrieves data
+		ResultSet rs = conn.createStatement().executeQuery(
+				"SELECT movies.id, count(tweets.text) as count, SUM(tweets.top_tweet) as count_top, popularity "
+				+"FROM movies "
+				+"LEFT JOIN tweets ON tweets.movieId=movies.id "
+				+"GROUP BY tweets.movieId "
+		);
+		while(rs.next()){
+			listIds.add(rs.getLong("id"));
+			listCounts.add(rs.getInt("count"));
+			listRatioTop.add(rs.getInt("count")>0 ? (float)rs.getInt("count_top") / (float) rs.getInt("count") : 0);
+			listPopularity.add(rs.getFloat("popularity"));
+		}
+		//Updates movies with values
+		for(int i=0; i!=listIds.size(); ++i){
+			//Computes rel figures
+			class RelGenerator{
+				float computeInt(ArrayList<Integer> c, int i){
+					if((Collections.max(c)==Collections.min(c))) return 0;
+					return 100*((float)(c.get(i) - Collections.min(c)))
+							/((float)(Collections.max(c)-Collections.min(c)));
+				}
+				float computeFloat(ArrayList<Float> c, int i){
+					if((Collections.max(c)==Collections.min(c))) return 0;
+					return 100*((c.get(i) - Collections.min(c)))
+							/((Collections.max(c)-Collections.min(c)));
+				}
+			}
+			float relPop = new RelGenerator().computeFloat(listPopularity, i);
+			float relFlow = new RelGenerator().computeInt(listCounts, i);
+			float relRating = new RelGenerator().computeFloat(listRatioTop, i);
+			//Statement
+			PreparedStatement ps = conn.prepareStatement(
+					"UPDATE movies SET rel_pop=?, rel_flow=?, rel_rating=? WHERE id=?");
+			ps.setFloat(1, relPop);
+			ps.setFloat(2, relFlow);
+			ps.setFloat(3, relRating);
+			ps.setLong(4, listIds.get(i));
+			ps.executeUpdate();
+		}
 	}
 	
 	//Close the client
