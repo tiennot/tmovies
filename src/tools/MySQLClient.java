@@ -14,7 +14,7 @@ import themoviedb.TrackManager;
 import themoviedb.TrackManager.IdAndTitle;
 
 public class MySQLClient{
-	private String url = "jdbc:mysql://127.0.0.1/";
+	private String url = "jdbc:mysql://127.0.0.1/?characterEncoding=utf-8&useUnicode=true";
 	private String dbName = "movies";
 	private String driver = "com.mysql.jdbc.Driver";
 	private String userName = "root";
@@ -32,7 +32,10 @@ public class MySQLClient{
 	public void connect(String username, String password){
 		try {
 			Class.forName(driver).newInstance();
-			conn = DriverManager.getConnection(url+dbName,userName,password);
+			conn = DriverManager.getConnection(
+					url+dbName+"?characterEncoding=utf-8&character_encoding_server=utf8mb4",
+					userName,
+					password);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
