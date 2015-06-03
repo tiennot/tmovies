@@ -14,8 +14,6 @@ public class Configuration {
 	//Static, API key
 	private static final String api_key = "76b1ee24ab9d445ff9849c97f44e8724";
 	public static final String getApiKey(){ return api_key; }
-	//Static, minimum popularity for a film to be considered
-	public static final double min_popularity = 0.80;
 	
 	//JSON configuration from themoviedb
 	private JSONObject json_config;

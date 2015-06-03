@@ -1,6 +1,8 @@
 package streamingAPI;
 import java.util.ArrayList;
 
+import analysis.DuplicateFinder;
+import analysis.TrustIndicator;
 import twitter4j.JSONException;
 import twitter4j.JSONObject;
 
@@ -16,6 +18,10 @@ public class Tweet {
 	public long timestamp;
 	//The movie id identified for the tweet
 	public long movieId;
+	//Hash of the sanitized text
+	public int hash;
+	//Tells if relevant tweet or not
+	public boolean topTweet;
 	
 	//Constructor
 	public Tweet(JSONObject obj) throws JSONException{
@@ -26,15 +32,13 @@ public class Tweet {
 		user = userObj.getString("name");
 		screen_name = userObj.has("screen_name") ? userObj.getString("screen_name") : "";
 		avatar = userObj.getString("profile_image_url");
+		hash = DuplicateFinder.hash(this.text);
+		topTweet = TrustIndicator.topTweet(this);
 	}
 	
 	//Analysis method to tell if the tweet should go to top tweets
 	public boolean topTweet(){
-		if(text.indexOf("movie")!=-1
-				|| text.indexOf("film")!=-1
-				|| text.indexOf("watch")!=-1)
-			return true;
-		return false;
+		return TrustIndicator.topTweet(this);
 	}
 
 }

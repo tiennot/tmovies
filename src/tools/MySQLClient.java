@@ -8,6 +8,7 @@ import java.util.Set;
 
 import javax.sql.*;
 
+import analysis.DuplicateFinder;
 import streamingAPI.Tweet;
 import themoviedb.Movie;
 import themoviedb.TrackManager;
@@ -87,6 +88,7 @@ public class MySQLClient{
 		return conn.createStatement().execute("DELETE FROM movies WHERE id NOT IN "+inString);
 	}
 	
+	//Updates the popularity for a given movie
 	public boolean updatePopularity(long movieId, double popularity) throws Exception{
 		PreparedStatement ps = conn.prepareStatement("UPDATE movies SET popularity=? WHERE id=?");
 		ps.setDouble(1, popularity);
@@ -97,15 +99,37 @@ public class MySQLClient{
 	//Inserts a tweet into the database
 	public boolean insertTweet(Tweet tweet) throws Exception{
 		PreparedStatement ps = conn.prepareStatement(
-				"INSERT INTO tweets (timestamp, user, screen_name, text, avatar, movieId, top_tweet) VALUES (?, ?, ?, ?, ?, ?, ?)");
+				"INSERT INTO tweets (timestamp, user, screen_name, text, avatar, movieId, top_tweet, hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
 		ps.setLong(1, tweet.timestamp);
 		ps.setString(2, tweet.user);
 		ps.setString(3, tweet.screen_name);
 		ps.setString(4, tweet.text);
 		ps.setString(5, tweet.avatar);
 		ps.setFloat(6, tweet.movieId);
-		ps.setBoolean(7, tweet.topTweet());
+		ps.setBoolean(7, tweet.topTweet);
+		ps.setInt(8, tweet.hash);
 		return ps.executeUpdate()==1;
+	}
+	
+	//Gets text of tweets with the same hash
+	public ArrayList<String> getTextsForHash(int hash) throws SQLException{
+		ArrayList<String> list = new ArrayList<String>();
+		PreparedStatement ps = conn.prepareStatement("SELECT text FROM tweets WHERE hash = ?");
+		ps.setInt(1, hash);
+		ResultSet rs = ps.executeQuery();
+		while(rs.next())
+			list.add(rs.getString("text"));
+		return list;
+	}
+	
+	//Gets the number of tweets from the same author
+	public int getNbTweetFromSameAuthor(String screen_name, long movieId) throws SQLException{
+		PreparedStatement ps = conn.prepareStatement("SELECT count(screen_name) as count FROM tweets WHERE movieId = ? GROUP BY screen_name");
+		ps.setLong(1, movieId);
+		ResultSet rs = ps.executeQuery();
+		if(rs.next())
+			return rs.getInt("count");
+		return 0;
 	}
 	
 	//Generates the relative popularity, flow and rating

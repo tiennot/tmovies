@@ -4,6 +4,7 @@ import themoviedb.Configuration;
 import themoviedb.MovieRetriever;
 import themoviedb.TrackManager;
 import tools.MySQLClient;
+import tools.Stats;
 
 /*
  * Main class, supposed to be the one starting the script
