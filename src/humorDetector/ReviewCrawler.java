@@ -8,6 +8,9 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -20,31 +23,30 @@ import org.jsoup.select.Elements;
  * Retrieves reviews from metacritic.com
  */
 public class ReviewCrawler {
-	private String url = "";
 	private String htmlCode = "";
 	
 	//Retrieves the HTML code of the page
-	private void retrieveHTMLCode() throws IOException{
+	public String HTMLCode(String url) throws IOException{
 		BufferedReader in = new BufferedReader(
         	new InputStreamReader(
         		new URL(url).openStream()
         	)
         );
-		//Resets HTML code
-        htmlCode = "";
+		//HTML code
+        String source = "";
         String line = "";
         while ((line = in.readLine()) != null){
-        	htmlCode += line;
+        	source += line;
         }
         in.close();
+        return source;
 	}
 	
 	/*
 	 * Returns the set of Critics given an url
 	 */
-	public ArrayList<Critic> getCritics(String url) throws IOException{
-		this.url = url;
-		retrieveHTMLCode();
+	public ArrayList<Critic> getCritics(String url) throws Exception{
+		this.htmlCode = HTMLCode(url);
 		ArrayList<Critic> critics = new ArrayList<Critic>();
 		//Parse HTML
 		Document doc = Jsoup.parse(this.htmlCode);
@@ -81,28 +83,43 @@ public class ReviewCrawler {
 	}
 	
 	public static void main(String[] argv){
+		Set<String> urlList = new HashSet<String>();
 		ReviewCrawler rc = new ReviewCrawler();
-		String[] urlList = new String[]{
-				"http://www.metacritic.com/movie/kingsman-the-secret-service/user-reviews",
-				"http://www.metacritic.com/movie/chappie/user-reviews",
-				"http://www.metacritic.com/movie/jurassic-park/user-reviews",
-				"http://www.metacritic.com/movie/the-dark-knight/user-reviews",
-				"http://www.metacritic.com/movie/hellboy/user-reviews",
-				"http://www.metacritic.com/movie/daredevil/user-reviews",
-				"http://www.metacritic.com/movie/hunger-games/user-reviews",
-				"http://www.metacritic.com/movie/fifty-shades-of-grey/user-reviews",
-				"http://www.metacritic.com/movie/american-sniper/user-reviews",
-				"http://www.metacritic.com/movie/argo/user-reviews",
-				"http://www.metacritic.com/movie/a-beautiful-mind/user-reviews",
-				"http://www.metacritic.com/movie/500-days-of-summer/user-reviews"
-		};
-		for(String url: urlList){
+		String letters = "vwxyz";
+		for(int i=0; i!=letters.length(); i++){
+			String letterPage = "http://www.metacritic.com/browse/movies/title/dvd/" + letters.charAt(i);
 			try {
-				ArrayList<Critic> a = rc.getCritics(url);
-				System.out.println(url);
-				rc.appendCriticsToFile("data/corpus.txt", a);
+				System.out.println(letterPage);
+				String letterPageHTML = rc.HTMLCode(letterPage);
+				Matcher m = Pattern.compile("<a href=\"/movie/([a-z0-9-]+)\">")
+					     .matcher(letterPageHTML);
+				int count = 0;
+				while (m.find()) {
+					urlList.add("http://www.metacritic.com/movie/"+m.group(1)+"/user-reviews");
+					count++;
+				}
+				System.out.println("\tFound "+count+" movies");
 			} catch (IOException e) {
-			e.printStackTrace();
+				i--;
+				System.err.println("\tError, retry");
+			}
+		}
+		//Retrieves
+		for(String url: urlList){
+			int i =0;
+			while(i<5){
+				try {
+					ArrayList<Critic> a = rc.getCritics(url);
+					System.out.println(url);
+					rc.appendCriticsToFile("data/corpus.txt", a);
+					break;
+				} catch (IOException e) {
+					System.err.println("\tError, retry (i="+i+")");
+				} catch (Exception e) {
+					System.err.println("\tError, couldn't retry (i="+i+")");
+					break;
+				}
+				i++;
 			}
 		}
 	}

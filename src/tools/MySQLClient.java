@@ -99,7 +99,7 @@ public class MySQLClient{
 	//Inserts a tweet into the database
 	public boolean insertTweet(Tweet tweet) throws Exception{
 		PreparedStatement ps = conn.prepareStatement(
-				"INSERT INTO tweets (timestamp, user, screen_name, text, avatar, movieId, top_tweet, hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+				"INSERT INTO tweets (timestamp, user, screen_name, text, avatar, movieId, top_tweet, hash, score, trust, followers_count, friends_count, statuses_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 		ps.setLong(1, tweet.timestamp);
 		ps.setString(2, tweet.user);
 		ps.setString(3, tweet.screen_name);
@@ -108,6 +108,11 @@ public class MySQLClient{
 		ps.setFloat(6, tweet.movieId);
 		ps.setBoolean(7, tweet.topTweet);
 		ps.setInt(8, tweet.hash);
+		ps.setDouble(9,  tweet.score);
+		ps.setDouble(10,  tweet.trust);
+		ps.setInt(11,  tweet.followers_count);
+		ps.setInt(12,  tweet.friends_count);
+		ps.setInt(13,  tweet.statuses_count);
 		return ps.executeUpdate()==1;
 	}
 	
@@ -137,11 +142,11 @@ public class MySQLClient{
 		//Lists
 		ArrayList<Long> listIds = new ArrayList<Long>();
 		ArrayList<Integer> listCounts = new ArrayList<Integer>();
-		ArrayList<Float> listRatioTop = new ArrayList<Float>();
+		ArrayList<Float> listAvgScore = new ArrayList<Float>();
 		ArrayList<Float> listPopularity = new ArrayList<Float>();
 		//Retrieves data
 		ResultSet rs = conn.createStatement().executeQuery(
-				"SELECT movies.id, count(tweets.text) as count, SUM(tweets.top_tweet) as count_top, popularity "
+				"SELECT movies.id, count(tweets.text) as count, SUM(tweets.score) as sum_scores, popularity "
 				+"FROM movies "
 				+"LEFT JOIN tweets ON tweets.movieId=movies.id "
 				+"GROUP BY tweets.movieId "
@@ -149,7 +154,7 @@ public class MySQLClient{
 		while(rs.next()){
 			listIds.add(rs.getLong("id"));
 			listCounts.add(rs.getInt("count"));
-			listRatioTop.add(rs.getInt("count")>0 ? (float)rs.getInt("count_top") / (float) rs.getInt("count") : 0);
+			listAvgScore.add( (float) (rs.getInt("count")>0 ? rs.getDouble("sum_scores") / (double) rs.getInt("count") : 0));
 			listPopularity.add(rs.getFloat("popularity"));
 		}
 		//Updates movies with values
@@ -169,7 +174,7 @@ public class MySQLClient{
 			}
 			float relPop = new RelGenerator().computeFloat(listPopularity, i);
 			float relFlow = new RelGenerator().computeInt(listCounts, i);
-			float relRating = new RelGenerator().computeFloat(listRatioTop, i);
+			float relRating = new RelGenerator().computeFloat(listAvgScore, i);
 			//Statement
 			PreparedStatement ps = conn.prepareStatement(
 					"UPDATE movies SET rel_pop=?, rel_flow=?, rel_rating=? WHERE id=?");

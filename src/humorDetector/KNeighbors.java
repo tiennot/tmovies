@@ -5,131 +5,132 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
 public class KNeighbors {
+	private static int k = 10;
 	private ArrayList<Critic> critics;
-	private Map<String, Integer> uniqueWords;
+	public ArrayList<Critic> testCritics;
+	private Map<String, ArrayList<Critic>> criticsForWords;
 	private double[][] matrix;
 	int nbOfWords;
 	
-	public KNeighbors() throws IOException{
+	public KNeighbors(){
 		//reads the corpus from file
 		critics = new ArrayList<Critic>();
+		testCritics = new ArrayList<Critic>();
 		String line;
-		BufferedReader br = new BufferedReader(new FileReader("data/corpus.txt"));
-		while ((line = br.readLine()) != null) {
-			Critic c = new Critic(line);
-			c.sanitize();
-			if(c.getComment().length()<30 || c.getComment().length()>300) continue;
-			critics.add(c);
+		int count = 0;
+		try{
+			BufferedReader br = new BufferedReader(new FileReader("data/corpus.txt"));
+			while ((line = br.readLine()) != null) {
+				if(line.split("\t").length!=2) continue;
+				Critic c = new Critic(Integer.parseInt(line.split("\t")[0]), line.split("\t")[1]);
+				c.sanitize();
+				if(c.getComment().length()<30 || c.getComment().length()>150) continue;
+				if(count%10==8 || count%10==9) testCritics.add(c);
+				else critics.add(c);
+				count++;
+			}
+			br.close();
+		}catch(Exception e){
+			e.printStackTrace();
 		}
-		br.close();
 		//Computes set of unique words
-		uniqueWords = new HashMap<String, Integer>();
+		criticsForWords = new HashMap<String, ArrayList<Critic>>(); 
 		nbOfWords = 0;
 		for(Critic c: critics){
 			for(String word: c.getWords()){
-				if(!uniqueWords.containsKey(word)){
-					uniqueWords.put(word,  nbOfWords);
+				if(!criticsForWords.containsKey(word)){
+					criticsForWords.put(word,  new ArrayList<Critic>());
 					nbOfWords++;
 				}
-			}
-		}
-
-		matrix = new double[critics.size()][nbOfWords];
-		for(int i=0; i!=critics.size(); i++){
-			for(String word: critics.get(i).getWords()){
-				matrix[i][uniqueWords.get(word)]++;
-			}
-			double sum = critics.get(i).getWords().size();
-			if(sum!=0){
-				for(int j=0; j!=nbOfWords; j++){
-					matrix[i][j] /= sum;
-				}
+				criticsForWords.get(word).add(c);
 			}
 		}
 		System.out.println(critics.size()+"/"+nbOfWords);
-		
-		//Prints the matrix
-		/*for(double[] row: matrix){
-			for(double value: row){
-				System.out.print(value+" ");
-			}
-			System.out.println();
-		}*/
 	}
 	
 	//Gives the norm of the difference of two critics
-	private double norm(int i1, int i2){
-		return normVector(matrix[i1], matrix[i2]);
-	}
-	
-	//Returns norm with vectors
-	private double normVector(double[] v1, double[] v2){
+	private double norm(Critic c1, Critic c2){
 		double norm = 0;
-		for(int j=0; j!=nbOfWords; j++){
-			norm += (v1[j]-v2[j])*(v1[j]-v2[j]);
+		double count1 = (double) c1.getWords().size(), count2 = (double) c2.getWords().size();
+		for(String word: c1.getWords()){
+			if(c2.getWords().contains(word)){
+				norm += (1./count1 - 1./count2) * (1./count1 - 1./count2);
+			}else{
+				norm += 1./count1 * 1./count1;
+			}
 		}
-		//System.err.println("Norm("+i1+","+i2+")="+Math.sqrt(norm));
+		for(String word: c2.getWords()){
+			if(!c1.getWords().contains(word)){
+				norm += 1./count2 * 1./count2;
+			}
+		}
 		return Math.sqrt(norm);
 	}
 	
-	public void blabla(){
-		double minNorm = Double.MAX_VALUE;
-		Critic[] winners = new Critic[2];
-		for(int i1=0; i1!=critics.size(); i1++){
-			for(int i2=i1+1; i2!=critics.size(); i2++){
-				if(this.norm(i1, i2)<minNorm && critics.get(i1).getScore()!=critics.get(i2).getScore()){
-					minNorm = this.norm(i1, i2);
-					System.out.println(minNorm);
-					winners[0] = critics.get(i1);
-					winners[1] = critics.get(i2);
-				}
+	public double kNeighbors(String tweet) throws IOException{
+		//Represents a potential neighbor
+		class Neighbor implements Comparable<Neighbor>{
+			Critic c;
+			double distance;
+			Neighbor(Critic c, double distance){
+				this.c = c;
+				this.distance = distance;
+			}
+			public int compareTo(Neighbor that) {
+				return Double.compare(this.distance, that.distance);
 			}
 		}
-		System.out.println("==========");
-		winners[0].out();
-		winners[1].out();
-	}
-	
-	public void diagnosizeTweet(String tweet){
-		Set<String> words = new HashSet<String>();
-		for(String word: tweet.split(" ")){
-			words.add(word);
-		}
-		//Fills the vector for the tweet
-		double[] vectorTweet = new double[nbOfWords];
-		double sum = 0;
-		for(String word: words){
-			if(uniqueWords.containsKey(word)){
-				vectorTweet[uniqueWords.get(word)]++;
-				sum++;
-			}
-		}
-		//Normalize
-		if(sum!=0){
-			for(int j=0; j!=nbOfWords; j++){
-				vectorTweet[j] /= sum;
-			}
-		}
-					
-		double minNorm = Double.MAX_VALUE;
+		//The tweet
+		Critic cTweet = new Critic(5, tweet);
 		//Compares to all critics
-		for(int i=0; i!=critics.size(); i++){
-			if(normVector(vectorTweet, matrix[i])<minNorm){
-				minNorm = normVector(vectorTweet, matrix[i]);
-				System.err.println(minNorm);
-				critics.get(i).out();
+		ArrayList<Neighbor> neighbors = new ArrayList<Neighbor>();
+		//Explores candidates
+		Set<Critic> explored = new HashSet<Critic>();
+		for(String word: cTweet.getWords()){
+			if(!criticsForWords.containsKey(word)) continue;
+			ArrayList<Critic> criticsForWord = criticsForWords.get(word);
+			for(Critic c: criticsForWord){
+				if(explored.contains(c)) continue;
+				explored.add(c);
+				neighbors.add(new Neighbor(c, norm(cTweet, c)));
+			}
+			if(neighbors.size()>k){
+				Collections.sort(neighbors);
+				neighbors = new ArrayList<Neighbor>(neighbors.subList(0, k));
 			}
 		}
+		
+		double score = 0, sumDist = 0;
+		for(Neighbor n: neighbors){
+			//System.out.println(n.distance + " / "+n.c.getScore()+" / "+n.c.getComment());
+			score += n.distance*((double)n.c.getScore());
+			sumDist += n.distance;
+		}
+		if(sumDist!=0) score /= sumDist;
+		return score;
 	}
 	
 	public static void main(String[] argv) throws IOException{
 		KNeighbors k = new KNeighbors();
-		k.diagnosizeTweet("weird movie lots of interresting stress though");
+		for(KNeighbors.k=3; KNeighbors.k!=51; KNeighbors.k+=2){
+			double sumEcarts = 0;
+			int count = 0;
+			int nbSample = Math.max(300, k.testCritics.size());
+			for(Critic c: k.testCritics){
+				double computedScore = Math.round(k.kNeighbors(c.getComment()));
+				sumEcarts += Math.abs(computedScore-c.getScore());
+				//System.out.println("\t"+count+"/"+k.testCritics.size());
+				count++;
+				if(count==nbSample) break;
+			}
+			System.out.println("Ecart moyen pour k="+KNeighbors.k+": "+ (sumEcarts/((double)nbSample)));
+		}
 	}
 }
