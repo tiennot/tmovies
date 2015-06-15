@@ -3,6 +3,8 @@ package analysis;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.UnsupportedEncodingException;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -65,15 +67,52 @@ public  class DuplicateFinder {
 		return sanitizeTweet(text).hashCode();
 	}
 	
-	public static int fakeHash(String text){
+	public static int[] fakeHash(String text){
+		//We want an array with 20 hash values
+		int[] hash = new int[20];
 		text = sanitizeTweet(text);
-		if(text.length()<15) return text.hashCode();
-		int hash = Integer.MAX_VALUE;
-		for(int i=0; i!=text.length()-15; ++i){
-			int subHash = text.substring(i, i+15).hashCode();
-			hash = Math.min(hash,  subHash);
-			//System.out.println(text.substring(i, i+15)+subHash);
+		for(int k=0; k!=20; ++k){
+			//Defines a basic salt
+			String salt = String.valueOf(k);
+			//If text not long enough, just takes the hash
+			if(text.length()<10){
+				try {
+					hash[k] = AeSimpleSHA1.SHA1(text+salt).hashCode();
+				} catch (Exception e) {
+					e.printStackTrace();
+					hash[k] = (text+salt).hashCode();
+				}
+			}
+			//Else, takes the minimum value of sub hashes
+			int subHash = Integer.MAX_VALUE;
+			for(int i=0; i!=text.length()-10; ++i){
+				try {
+					hash[k] = Math.min(
+						AeSimpleSHA1.SHA1(text.substring(i, i+10)+salt).hashCode(),
+						subHash
+					);
+				} catch (Exception e) {
+					e.printStackTrace();
+					hash[k] = Math.min(
+						(text.substring(i, i+10)+salt).hashCode(),
+						subHash
+					);
+				}
+			}
 		}
 		return hash;
+	}
+	
+	
+	//
+	public static void main(String[] argv){
+		int[] fh;
+		try {
+			fh = fakeHash("I'm the devil and I love metal baby!!!! Do you reckon knowing a Jeff K.?");
+			for(int k=0; k!=20; k++)
+				System.out.println(fh[k]);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 }

@@ -21,8 +21,8 @@ public class Tweet {
 	public long timestamp;
 	//The movie id identified for the tweet
 	public long movieId;
-	//Hash of the sanitized text
-	public int hash;
+	//Array of 20 Hash of the sanitized text
+	public int[] hash;
 	//Tells if relevant tweet or not
 	public boolean topTweet;
 	//Score from 0 to 10, trust from 0 to 10 + static kneighbor
@@ -43,7 +43,7 @@ public class Tweet {
 		friends_count = userObj.has("friends_count") ? userObj.getInt("friends_count") : 0;
 		statuses_count = userObj.has("statuses_count") ? userObj.getInt("statuses_count") : 0;
 		avatar = userObj.getString("profile_image_url");
-		hash = DuplicateFinder.hash(this.text);
+		hash = DuplicateFinder.fakeHash(this.text);
 		topTweet = TrustIndicator.topTweet(this);
 		try {
 			score = kNeighbors.kNeighbors(text);

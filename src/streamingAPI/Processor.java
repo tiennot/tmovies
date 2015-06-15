@@ -26,6 +26,7 @@ public class Processor {
 			//Creates JSON Object
 			JSONObject obj;
 			obj = new JSONObject(msg);
+			
 			//Ignores retweets
 			if(obj.has("retweeted_status")){
 				return;
@@ -38,6 +39,7 @@ public class Processor {
 				ArrayList<String> similars = sqlClient.getTextsForHash(tweet.hash);
 				boolean found = false;
 				for(String s: similars){
+					System.out.println("\t"+s);
 					if(DuplicateFinder.LevenshteinDistance(s, tweet.text)<50){
 						found = true;
 						break;
@@ -59,6 +61,7 @@ public class Processor {
 				Stats.TWEETS_NOMOVIE++;
 			}
 		} catch (Exception e) {
+			e.printStackTrace();
 			Stats.TWEETS_JSONERROR++;
 		}
 	}

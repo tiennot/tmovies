@@ -13,7 +13,7 @@ public class Main {
 	public static void main(String[] args) throws Exception {
 		//Instantiate SQL Client
 		MySQLClient sql = new MySQLClient("jdbc:mysql://127.0.0.1/", "movies");
-		sql.connect("root", "");
+		sql.connect("root", "topaze");
 		//Instantiate configuration
 		Configuration config = new Configuration(sql);
 		config.updateConfig();

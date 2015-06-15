@@ -18,8 +18,6 @@ public class MySQLClient{
 	private String url = "jdbc:mysql://127.0.0.1/?characterEncoding=utf-8&useUnicode=true";
 	private String dbName = "movies";
 	private String driver = "com.mysql.jdbc.Driver";
-	private String userName = "root";
-	private String password = "";
 	//Connection object
 	Connection conn;
 	
@@ -35,7 +33,7 @@ public class MySQLClient{
 			Class.forName(driver).newInstance();
 			conn = DriverManager.getConnection(
 					url+dbName+"?characterEncoding=utf-8&character_encoding_server=utf8mb4",
-					userName,
+					username,
 					password);
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -98,8 +96,10 @@ public class MySQLClient{
 	
 	//Inserts a tweet into the database
 	public boolean insertTweet(Tweet tweet) throws Exception{
+		//The statement to insert the tweet itself
 		PreparedStatement ps = conn.prepareStatement(
-				"INSERT INTO tweets (timestamp, user, screen_name, text, avatar, movieId, top_tweet, hash, score, trust, followers_count, friends_count, statuses_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+				"INSERT INTO tweets (timestamp, user, screen_name, text, avatar, movieId, top_tweet, score, trust, followers_count, friends_count, statuses_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+				Statement.RETURN_GENERATED_KEYS);
 		ps.setLong(1, tweet.timestamp);
 		ps.setString(2, tweet.user);
 		ps.setString(3, tweet.screen_name);
@@ -107,20 +107,50 @@ public class MySQLClient{
 		ps.setString(5, tweet.avatar);
 		ps.setFloat(6, tweet.movieId);
 		ps.setBoolean(7, tweet.topTweet);
-		ps.setInt(8, tweet.hash);
-		ps.setDouble(9,  tweet.score);
-		ps.setDouble(10,  tweet.trust);
-		ps.setInt(11,  tweet.followers_count);
-		ps.setInt(12,  tweet.friends_count);
-		ps.setInt(13,  tweet.statuses_count);
-		return ps.executeUpdate()==1;
+		ps.setDouble(8,  tweet.score);
+		ps.setDouble(9,  tweet.trust);
+		ps.setInt(10,  tweet.followers_count);
+		ps.setInt(11,  tweet.friends_count);
+		ps.setInt(12,  tweet.statuses_count);
+		//Executes the statement
+		int affectedRows = ps.executeUpdate();
+		if (affectedRows == 0) {
+            throw new SQLException("The tweet couldn't be inserted");
+        }
+		//Retrieves the id just inserted
+		ResultSet generatedKeys = ps.getGeneratedKeys();
+		if (generatedKeys.next()) {
+            long inserted_id = generatedKeys.getLong(1);
+            //The statement to insert the hashes
+    		String query_hash = "INSERT INTO hash (tweet_id";
+    		for(int k=0; k!=20; k++) query_hash += ", hash_"+k;
+    		query_hash += ") VALUES (?";
+    		for(int k=0; k!=20; k++) query_hash += ", ?";
+    		query_hash += ")";
+    		//Sets the hashes 
+    		PreparedStatement ps_hash = conn.prepareStatement(query_hash);
+    		ps_hash.setLong(1, inserted_id);
+    		for(int k=0; k!=20; k++) ps_hash.setLong(k+2,  tweet.hash[k]);
+    		return ps_hash.executeUpdate()==1;
+        }else {
+            throw new SQLException("Couldn't insert the hash for the tweet (no id)");
+        }
 	}
 	
 	//Gets text of tweets with the same hash
-	public ArrayList<String> getTextsForHash(int hash) throws SQLException{
+	public ArrayList<String> getTextsForHash(int[] hash) throws SQLException{
 		ArrayList<String> list = new ArrayList<String>();
-		PreparedStatement ps = conn.prepareStatement("SELECT text FROM tweets WHERE hash = ?");
-		ps.setInt(1, hash);
+		//Sets all the 20 hash
+		String query = "SELECT text FROM tweets, hash WHERE tweets.id=hash.tweet_id AND (";
+		for(int k=0; k!=20; k++){
+			query += "hash_"+k+"=? OR ";
+		}
+		query += " 1=2)";
+		//Prepares the statement
+		PreparedStatement ps = conn.prepareStatement(query);
+		for(int k=0; k!=20; k++){
+			ps.setInt(k+1, hash[k]);
+		}
 		ResultSet rs = ps.executeQuery();
 		while(rs.next())
 			list.add(rs.getString("text"));
