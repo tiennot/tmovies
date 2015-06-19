@@ -75,27 +75,28 @@ public  class DuplicateFinder {
 			//Defines a basic salt
 			String salt = String.valueOf(k);
 			//If text not long enough, just takes the hash
-			if(text.length()<10){
+			if(text.length()<11){
 				try {
 					hash[k] = AeSimpleSHA1.SHA1(text+salt).hashCode();
 				} catch (Exception e) {
 					e.printStackTrace();
 					hash[k] = (text+salt).hashCode();
 				}
+				continue;
 			}
 			//Else, takes the minimum value of sub hashes
-			int subHash = Integer.MAX_VALUE;
+			hash[k] = Integer.MAX_VALUE;
 			for(int i=0; i!=text.length()-10; ++i){
 				try {
 					hash[k] = Math.min(
 						AeSimpleSHA1.SHA1(text.substring(i, i+10)+salt).hashCode(),
-						subHash
+						hash[k]
 					);
 				} catch (Exception e) {
 					e.printStackTrace();
 					hash[k] = Math.min(
 						(text.substring(i, i+10)+salt).hashCode(),
-						subHash
+						hash[k]
 					);
 				}
 			}
@@ -106,13 +107,17 @@ public  class DuplicateFinder {
 	
 	//
 	public static void main(String[] argv){
-		int[] fh;
+		int[] fh, fh2;
+		String s1 = "Want to buy a #JurassicWorld dinosaur puppy? Check out http://ln.is/com/J8sA5";
+		String s2 = "Want to buy a #JurassicWorld dinosaur toy? Check out http://ln.is/com/J8sA5";
 		try {
-			fh = fakeHash("I'm the devil and I love metal baby!!!! Do you reckon knowing a Jeff K.?");
+			fh = fakeHash(s1);
+			fh2 = fakeHash(s2);
 			for(int k=0; k!=20; k++)
-				System.out.println(fh[k]);
+				System.out.println(fh[k]+"    "+fh2[k]+"    "+(fh[k]==fh2[k] ? "OK" : ""));
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		System.out.println("Levenshtein = "+LevenshteinDistance(s1, s2));
 	}
 }

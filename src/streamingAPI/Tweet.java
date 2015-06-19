@@ -26,7 +26,7 @@ public class Tweet {
 	//Tells if relevant tweet or not
 	public boolean topTweet;
 	//Score from 0 to 10, trust from 0 to 10 + static kneighbor
-	public double score = 5, trust = 0;
+	public double score = -1, trust = 0;
 	private static KNeighbors kNeighbors = new KNeighbors();
 	//Info about user
 	public int followers_count, friends_count, statuses_count;
@@ -45,11 +45,11 @@ public class Tweet {
 		avatar = userObj.getString("profile_image_url");
 		hash = DuplicateFinder.fakeHash(this.text);
 		topTweet = TrustIndicator.topTweet(this);
-		try {
+		/*try {
 			score = kNeighbors.kNeighbors(text);
 		} catch (IOException e) {
 			e.printStackTrace();
-		}
+		}*/
 	}
 	
 	//Analysis method to tell if the tweet should go to top tweets

@@ -1,4 +1,5 @@
 package streamingAPI;
+import java.sql.SQLException;
 import java.util.ArrayList;
 
 import analysis.DuplicateFinder;
@@ -29,6 +30,7 @@ public class Processor {
 			
 			//Ignores retweets
 			if(obj.has("retweeted_status")){
+				Stats.TWEETS_RETWEET++;
 				return;
 			}
 			Tweet tweet = new Tweet(obj);
@@ -39,7 +41,6 @@ public class Processor {
 				ArrayList<String> similars = sqlClient.getTextsForHash(tweet.hash);
 				boolean found = false;
 				for(String s: similars){
-					System.out.println("\t"+s);
 					if(DuplicateFinder.LevenshteinDistance(s, tweet.text)<50){
 						found = true;
 						break;
@@ -60,9 +61,12 @@ public class Processor {
 			}else{
 				Stats.TWEETS_NOMOVIE++;
 			}
-		} catch (Exception e) {
-			e.printStackTrace();
+		} catch (JSONException e) {
 			Stats.TWEETS_JSONERROR++;
+			e.printStackTrace();
+		} catch (SQLException e) {
+			Stats.TWEETS_SQLERROR++;
+			e.printStackTrace();
 		}
 	}
 	

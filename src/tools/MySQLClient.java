@@ -95,7 +95,7 @@ public class MySQLClient{
 	}
 	
 	//Inserts a tweet into the database
-	public boolean insertTweet(Tweet tweet) throws Exception{
+	public boolean insertTweet(Tweet tweet) throws SQLException{
 		//The statement to insert the tweet itself
 		PreparedStatement ps = conn.prepareStatement(
 				"INSERT INTO tweets (timestamp, user, screen_name, text, avatar, movieId, top_tweet, score, trust, followers_count, friends_count, statuses_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",

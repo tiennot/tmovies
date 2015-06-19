@@ -109,7 +109,6 @@ public class KNeighbors {
 		
 		double score = 0, sumDist = 0;
 		for(Neighbor n: neighbors){
-			//System.out.println(n.distance + " / "+n.c.getScore()+" / "+n.c.getComment());
 			score += n.distance*((double)n.c.getScore());
 			sumDist += n.distance;
 		}
