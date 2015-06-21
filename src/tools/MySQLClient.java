@@ -35,6 +35,7 @@ public class MySQLClient{
 					url+dbName+"?characterEncoding=utf-8&character_encoding_server=utf8mb4",
 					username,
 					password);
+			conn.createStatement().executeQuery("SET NAMES utf8mb4");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
